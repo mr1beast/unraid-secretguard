@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Added GitHub Releases `pluginURL` for Unraid update checks.
+- No functional SecretGuard behavior changed.
+
 ## 0.4.0
 
 First GitHub-ready public beta release, based on the tested v0.3.5 codebase.

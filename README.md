@@ -48,6 +48,21 @@ After installation open:
 Settings -> User Utilities -> Unraid SecretGuard
 ```
 
+
+## Updates
+
+The plugin manifest uses this stable GitHub Release URL for update checks:
+
+```text
+https://github.com/mr1beast/unraid-secretguard/releases/latest/download/unraid-secretguard.plg
+```
+
+When a newer release is published with `unraid-secretguard.plg` attached,
+Unraid can detect it through **Plugins -> Check for Updates**.
+
+This URL works without authentication only when the GitHub repository/release
+is publicly accessible. While the repository is private, use manual installation.
+
 ## Local build
 
 Requirements:

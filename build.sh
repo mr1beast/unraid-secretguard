@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="0.4.0"
+SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="0.4.1"
 mkdir -p "$OUT"; TAR="$OUT/${NAME}-${VERSION}.tar.gz"; PLG="$OUT/${NAME}.plg"; rm -f "$TAR" "$PLG"
 tar -C "$SRC" -czf "$TAR" .; B64=$(base64 -w 0 "$TAR")
 cat > "$PLG" <<PLG
@@ -10,11 +10,18 @@ cat > "$PLG" <<PLG
 <!ENTITY name "unraid-secretguard">
 <!ENTITY author "mr1beast">
 <!ENTITY version "$VERSION">
+<!ENTITY pluginURL "https://github.com/mr1beast/unraid-secretguard/releases/latest/download/unraid-secretguard.plg">
 <!ENTITY launch "Settings/SecretGuard">
 ]>
 <!-- Repository: https://github.com/mr1beast/unraid-secretguard -->
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.12.0" icon="secretguard.png">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" icon="secretguard.png">
 <CHANGES>
+### 0.4.1
+- Added Unraid plugin update URL using GitHub Releases.
+- Installed plugin now checks:
+  https://github.com/mr1beast/unraid-secretguard/releases/latest/download/unraid-secretguard.plg
+- No migration, rollback, vault, scanning, recreation, UI or icon behavior changed.
+
 ### 0.4.0
 - First GitHub-ready public beta release.
 - Publisher changed to mr1beast.
