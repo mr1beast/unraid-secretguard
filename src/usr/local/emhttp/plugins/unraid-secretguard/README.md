@@ -1,9 +1,3 @@
-# Unraid SecretGuard
+**Unraid SecretGuard**
 
-Runtime plugin files for Unraid SecretGuard.
-
-Project repository:
-https://github.com/mr1beast/unraid-secretguard
-
-Publisher: mr1beast
-Version: 0.4.1
+Detects likely Docker secrets and moves them out of flash-stored XML templates into protected env files or an encrypted Vault.

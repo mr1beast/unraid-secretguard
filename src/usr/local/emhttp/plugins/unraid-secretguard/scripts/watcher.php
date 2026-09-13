@@ -1,8 +1,18 @@
 <?php
 require_once '/usr/local/emhttp/plugins/unraid-secretguard/include/SecretGuard.php';
 $settings=SecretGuard::settings();
-if(($settings['AUTO_WATCH']??'yes')!=='yes') exit(0);
 @mkdir('/run/unraid-secretguard',0700,true);
+
+// Vault safety runs regardless of template-notification settings.
+// After reboot the runtime key is gone; any Vault-protected container that
+// autostarts is stopped and remembered so Unlock can recreate/start it.
+if(($settings['STORAGE_MODE']??'plain')==='vault' && is_file(SecretGuard::VAULT_META_FILE) && !is_file(SecretGuard::MASTER_KEY_FILE)) {
+    try { SecretGuard::enforceLockedVault($settings['SECRET_DIR']); } catch(Throwable $e) {
+        @exec('/usr/bin/logger -t unraid-secretguard '.escapeshellarg('Vault boot-lock enforcement failed: '.$e->getMessage()).' >/dev/null 2>&1');
+    }
+}
+
+if(($settings['AUTO_WATCH']??'yes')!=='yes') exit(0);
 $stateFile='/run/unraid-secretguard/watch-state.json';
 $old=is_file($stateFile)?json_decode((string)file_get_contents($stateFile),true):[]; if(!is_array($old))$old=[];
 $new=[];
