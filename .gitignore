@@ -1,0 +1,11 @@
+# Build output
+dist/
+
+# Temporary/editor files
+*~
+*.swp
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
