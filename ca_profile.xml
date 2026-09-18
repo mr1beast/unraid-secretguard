@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CommunityApplications>
+
+  <Profile>
+Unraid SecretGuard is a security-focused Unraid plugin that helps identify likely passwords, API keys, tokens and other credentials stored in Docker templates.
+
+SecretGuard can move selected credentials out of flash-stored XML templates into protected env files or an encrypted Vault, while keeping the Docker configuration usable.
+
+This repository contains the SecretGuard plugin and Community Applications metadata.
+
+For support, bug reports and feature requests, use the Unraid forum support thread or GitHub Issues.
+
+SecretGuard is currently Public Beta.
+  </Profile>
+
+  <Icon>https://raw.githubusercontent.com/mr1beast/unraid-secretguard/main/src/usr/local/emhttp/plugins/unraid-secretguard/secretguard.svg</Icon>
+
+  <WebPage>https://github.com/mr1beast/unraid-secretguard</WebPage>
+
+  <Forum>https://forums.unraid.net/topic/200627-plugin-unraid-secretguard/</Forum>
+
+</CommunityApplications>
