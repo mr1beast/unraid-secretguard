@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.4"
+SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.5"
 mkdir -p "$OUT"; TAR="$OUT/${NAME}-${VERSION}.tar.gz"; PLG="$OUT/${NAME}.plg"; rm -f "$TAR" "$PLG"
 tar -C "$SRC" -czf "$TAR" .; B64=$(base64 -w 0 "$TAR")
 cat > "$PLG" <<PLG
@@ -15,6 +15,10 @@ cat > "$PLG" <<PLG
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" icon="secretguard.png">
 <CHANGES>
+### 2026.09.18.5
+- Validate the public Unraid plugin update channel from 2026.09.18.4.
+- Version and changelog only; no runtime, UI or security behavior changed.
+
 ### 2026.09.18.4
 - Enable Unraid plugin update checks through the public GitHub main-branch manifest.
 - pluginURL: https://raw.githubusercontent.com/mr1beast/unraid-secretguard/main/unraid-secretguard.plg
@@ -93,4 +97,5 @@ PLG="${1:-/boot/config/plugins/unraid-secretguard.plg}"
 cp -f "$PLG" /boot/config/plugins/unraid-secretguard.plg
 plugin install /boot/config/plugins/unraid-secretguard.plg
 INSTALL
-chmod +x "$OUT/install-local.sh"; sha256sum "$PLG" "$TAR" > "$OUT/SHA256SUMS"
+chmod +x "$OUT/install-local.sh"
+(cd "$OUT" && sha256sum "$(basename "$PLG")" "$(basename "$TAR")" > SHA256SUMS)

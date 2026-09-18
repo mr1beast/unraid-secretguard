@@ -1,6 +1,6 @@
 # Releasing
 
-1. Update the version in `build.sh` when runtime behavior changes.
+1. Update the version in `build.sh` for every release.
 2. Update `CHANGELOG.md` and `README.md`.
 3. Run `./build.sh`.
 4. Verify syntax:

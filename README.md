@@ -162,10 +162,6 @@ Settings -> User Utilities -> Unraid SecretGuard
 ```
 
 
-## Updates
-
-The current public-beta manifest does not include a `pluginURL`. Install releases manually from GitHub while the repository/update endpoint is being finalized. A stable GitHub Releases update URL can be enabled later without changing SecretGuard's storage or migration behavior.
-
 ## Local build
 
 Requirements:

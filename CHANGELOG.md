@@ -1,6 +1,17 @@
 # Changelog
 
+## 2026.09.18.5
+
+- Update-channel validation release for installations running 2026.09.18.4.
+- Version and changelog only; no runtime, UI, migration, Vault, rollback, storage, Docker recreation, or security behavior changed.
+
 ## 2026.09.18.4
+
+- Enabled Unraid plugin update checks through the public GitHub `main`-branch manifest.
+- Added the public manifest as the installed plugin's `pluginURL`.
+- No SecretGuard migration, Vault, rollback, storage, Docker recreation, or UI behavior changed.
+
+## 2026.09.18.3
 
 - Overview is now the default landing tab.
 - Protection overview and Docker template audit are grouped on Overview.
