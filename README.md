@@ -207,6 +207,20 @@ deletes the managed secret file, and recreates the container.
 This avoids rolling back unrelated changes made to ports, paths, labels or other
 container configuration after the secret migration.
 
+## Adopting an existing env file
+
+An installed container shown as **Protected / plain / Legacy env: no variable metadata** can be adopted by SecretGuard when its Docker template points to an existing, parseable env file on confirmed persistent storage.
+
+Before adoption, SecretGuard shows a confirmation containing only the container name, env path, and variable names. Adoption does not read secret values into the UI, rewrite the env file, change Docker `ExtraParams`, or recreate the container.
+
+SecretGuard stores only non-secret adoption metadata in:
+
+```text
+/boot/config/plugins/unraid-secretguard/adopted/<safe-container>.json
+```
+
+After adoption, Protection overview shows **Managed by SecretGuard** and **Adopted existing env**. Rollback to Docker XML remains unavailable because a legacy env file does not contain the original XML variable metadata required for a safe rollback.
+
 ## License
 
 MIT License.

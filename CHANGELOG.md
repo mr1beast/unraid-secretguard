@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026.09.18.6
+
+- Added **Adopt existing env** for installed containers shown as `Protected / plain / Legacy env: no variable metadata`.
+- Adoption is offered only when the template has a parseable `--env-file` on persistent storage and the file is not already SecretGuard-managed or adopted.
+- The confirmation preview shows only the container name, env path, and variable names.
+- Adoption stores non-secret metadata under `/boot/config/plugins/unraid-secretguard/adopted/<safe-container>.json`.
+- Adoption does not rewrite the env file, change secret values, modify Docker `ExtraParams`, recreate the container, or expose secret values.
+- Adopted legacy env files remain ineligible for rollback because original Docker XML variable metadata is unavailable.
+
 ## 2026.09.18.5
 
 - Update-channel validation release for installations running 2026.09.18.4.

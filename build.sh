@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.5"
+SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.6"
 mkdir -p "$OUT"; TAR="$OUT/${NAME}-${VERSION}.tar.gz"; PLG="$OUT/${NAME}.plg"; rm -f "$TAR" "$PLG"
 tar -C "$SRC" -czf "$TAR" .; B64=$(base64 -w 0 "$TAR")
 cat > "$PLG" <<PLG
@@ -15,6 +15,11 @@ cat > "$PLG" <<PLG
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" icon="secretguard.png">
 <CHANGES>
+### 2026.09.18.6
+- Add generic adoption of eligible legacy plain env files without rewriting secrets, templates or Docker settings.
+- Store only container, env path, variable names and adoption state under the SecretGuard plugin configuration.
+- Keep rollback unavailable for adopted env files that do not contain original XML metadata.
+
 ### 2026.09.18.5
 - Validate the public Unraid plugin update channel from 2026.09.18.4.
 - Version and changelog only; no runtime, UI or security behavior changed.

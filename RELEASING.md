@@ -12,7 +12,7 @@
    bash -n src/usr/local/emhttp/plugins/unraid-secretguard/scripts/restart-watcher.sh
    ```
 5. Validate the generated `dist/unraid-secretguard.plg` as XML.
-6. Test the release on a non-critical Unraid host before publishing.
+6. Test the release on a non-critical Unraid host before publishing. For adoption changes, verify that preview and saved metadata contain names and paths only, and that the env file, Docker template, `ExtraParams`, and container state remain unchanged.
 7. Create a GitHub release using tag `vYYYY.MM.DD[.revision]` and attach:
    - `dist/unraid-secretguard.plg`
    - `dist/SHA256SUMS`

@@ -9,6 +9,7 @@ class SecretGuard {
     const VAULT_META_FILE = '/boot/config/plugins/unraid-secretguard/vault.json';
     const UNLOCK_STATE_FILE = '/run/unraid-secretguard/unlock-state.json';
     const VAULT_START_FILE = '/boot/config/plugins/unraid-secretguard/vault-start.json';
+    const ADOPTED_DIR = '/boot/config/plugins/unraid-secretguard/adopted';
     const VAULT_VERIFIER_TEXT = 'Unraid SecretGuard Vault Verifier v2';
     const MANAGED_SHARE_NAME = 'secretguard';
     const SHARE_CFG_DIR = '/boot/config/shares';
@@ -855,6 +856,59 @@ class SecretGuard {
         return self::parseSecretEnvText($text);
     }
 
+    private static function envFileFromExtraParams($extraText) {
+        if(!is_string($extraText) || $extraText==='') return '';
+        if(!preg_match('#(?:^|\s)--env-file(?:=|\s+)(?:"([^"]+)"|\'([^\']+)\'|([^\s]+))#',$extraText,$m)) return '';
+        foreach([1,2,3] as $i) if(isset($m[$i]) && $m[$i]!=='') return $m[$i];
+        return '';
+    }
+
+    private static function adoptionMetadataFile($safeName) {
+        return self::ADOPTED_DIR.'/'.$safeName.'.json';
+    }
+
+    private static function loadAdoptionMetadata($safeName,$container,$envFile) {
+        $file=self::adoptionMetadataFile($safeName);
+        if(!is_file($file)) return null;
+        $data=json_decode((string)file_get_contents($file),true);
+        if(!is_array($data) || empty($data['adopted']) || ($data['mode']??'')!=='plain') return null;
+        if(($data['container']??'')!==$container || ($data['env_file']??'')!==$envFile) return null;
+        $stored=$data['variables']??null;
+        if(!is_array($stored)) return null;
+        foreach($stored as $name) if(!is_string($name) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/',$name)) return null;
+        return $data;
+    }
+
+    private static function adoptionEligibility($envFile,$safeName) {
+        $result=['eligible'=>false,'variables'=>[],'reason'=>'Env file is not eligible for adoption.'];
+        if(!is_string($envFile) || $envFile==='' || !self::validSecretDir(dirname($envFile))) return $result;
+        $real=realpath($envFile);
+        if(!$real || !is_file($real) || !is_readable($real) || !self::validSecretDir(dirname($real))) {
+            $result['reason']='Env file does not exist or is not readable.'; return $result;
+        }
+        $storage=self::storageStatus($real);
+        if(empty($storage['persistent'])) {$result['reason']='Env file is not on confirmed persistent storage.'; return $result;}
+        if(is_file(self::adoptionMetadataFile($safeName))) {$result['reason']='Env file already has SecretGuard adoption metadata.'; return $result;}
+        $text=file_get_contents($real);
+        if($text===false) {$result['reason']='Env file could not be read.'; return $result;}
+        if(preg_match('/^\s*#\s*SecretGuard(?:-Meta| protected variable)\s*:/mi',$text)) {
+            $result['reason']='Env file already contains SecretGuard management metadata.'; return $result;
+        }
+        $names=[];
+        foreach(preg_split('/\r?\n/',$text) as $line) {
+            $trim=ltrim($line);
+            if($trim==='' || $trim[0]==='#') continue;
+            $p=strpos($line,'=');
+            if($p===false) {$result['reason']='Env file contains an unparseable line.'; return $result;}
+            $name=substr($line,0,$p);
+            if(!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/',$name)) {$result['reason']='Env file contains an invalid variable name.'; return $result;}
+            $names[$name]=true;
+        }
+        if(!$names) {$result['reason']='Env file contains no variables.'; return $result;}
+        $variables=array_keys($names); sort($variables,SORT_NATURAL|SORT_FLAG_CASE);
+        return ['eligible'=>true,'variables'=>$variables,'reason'=>''];
+    }
+
     private static function templateInfo($file,$secretDir) {
         $dom=new DOMDocument();
         if(!is_file($file) || !@$dom->load($file)) return null;
@@ -865,9 +919,9 @@ class SecretGuard {
         $plain=$secretDir.'/'.$safeName.'.env';
         $runtime=self::RUNTIME_ENV_DIR.'/'.$safeName.'.env';
         $vault=$secretDir.'/'.$safeName.'.sgv';
-        $protected=false; $mode=''; $envFile=''; $count=null; $names=[]; $rollbackAvailable=false; $legacy=false;
-        if(preg_match('#(?:^|\\s)--env-file=([^\\s]+)#',$extraText,$m)) {
-            $candidate=$m[1];
+        $protected=false; $mode=''; $envFile=''; $count=null; $names=[]; $rollbackAvailable=false; $legacy=false; $adopted=false; $adoptable=false;
+        $candidate=self::envFileFromExtraParams($extraText);
+        if($candidate!=='') {
             if($candidate===$plain) {$protected=true;$mode='plain';$envFile=$plain;}
             elseif($candidate===$runtime) {$protected=true;$mode='vault';$envFile=$runtime;}
         }
@@ -880,10 +934,16 @@ class SecretGuard {
                     $count=count($bundle['vars']); $names=array_keys($bundle['vars']);
                     $rollbackAvailable=$count>0;
                     foreach($names as $n) if(empty($bundle['meta'][$n])) {$rollbackAvailable=false;$legacy=true;break;}
+                    if($mode==='plain' && $legacy) {
+                        $adoption=self::adoptionEligibility($envFile,$safeName);
+                        $adoptable=!empty($adoption['eligible']) && empty($bundle['meta']);
+                        $adopted=self::loadAdoptionMetadata($safeName,$container,$envFile)!==null;
+                        if($adopted) $adoptable=false;
+                    }
                 }
             } catch(Throwable $e) {$count=null;$names=[];$rollbackAvailable=false;}
         }
-        return ['container'=>$container,'file'=>$file,'safe_name'=>$safeName,'protected'=>$protected,'mode'=>$mode,'env_file'=>$envFile,'vault_file'=>$vault,'secret_count'=>$count,'secret_names'=>$names,'rollback_available'=>$rollbackAvailable,'legacy'=>$legacy];
+        return ['container'=>$container,'file'=>$file,'safe_name'=>$safeName,'protected'=>$protected,'mode'=>$mode,'env_file'=>$envFile,'vault_file'=>$vault,'secret_count'=>$count,'secret_names'=>$names,'rollback_available'=>$rollbackAvailable,'legacy'=>$legacy,'adopted'=>$adopted,'adoptable'=>$adoptable];
     }
 
     public static function containerOverview($secretDir) {
@@ -896,6 +956,41 @@ class SecretGuard {
         }
         usort($rows,function($a,$b){return strcasecmp($a['container'],$b['container']);});
         return $rows;
+    }
+
+    public static function adoptExistingEnv($file,$secretDir) {
+        $realTemplateDir=realpath(self::TEMPLATE_DIR); $realFile=realpath($file);
+        if(!$realFile || dirname($realFile)!==$realTemplateDir) throw new Exception('Invalid template path.');
+        if(!self::validSecretDir($secretDir)) throw new Exception('Invalid secret directory.');
+        $info=self::templateInfo($realFile,$secretDir);
+        if(!$info) throw new Exception('Unable to read template.');
+        $installed=self::installedContainerNames();
+        if(!isset($installed[$info['container']])) throw new Exception('Container is no longer installed.');
+        if(!$info['protected'] || $info['mode']!=='plain' || !$info['legacy']) throw new Exception('This container does not use an adoptable legacy plain env file.');
+        if(!empty($info['adopted']) || is_file(self::adoptionMetadataFile($info['safe_name']))) throw new Exception('This env file is already adopted.');
+        $eligibility=self::adoptionEligibility($info['env_file'],$info['safe_name']);
+        if(empty($eligibility['eligible'])) throw new Exception($eligibility['reason']);
+
+        self::ensureCfgDir();
+        if(!is_dir(self::ADOPTED_DIR) && !mkdir(self::ADOPTED_DIR,0700,true)) throw new Exception('Unable to create adoption metadata directory.');
+        chmod(self::ADOPTED_DIR,0700);
+        $metadata=[
+            'container'=>$info['container'],
+            'mode'=>'plain',
+            'env_file'=>$info['env_file'],
+            'variables'=>$eligibility['variables'],
+            'adopted'=>true,
+            'rollback_metadata'=>false,
+            'adopted_at'=>gmdate('c')
+        ];
+        $metadataFile=self::adoptionMetadataFile($info['safe_name']);
+        $tmp=$metadataFile.'.tmp.'.getmypid();
+        $json=json_encode($metadata,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+        if($json===false || file_put_contents($tmp,$json."\n",LOCK_EX)===false) throw new Exception('Unable to write adoption metadata.');
+        chmod($tmp,0600);
+        if(is_file($metadataFile) || !rename($tmp,$metadataFile)) {@unlink($tmp); throw new Exception('Unable to activate adoption metadata.');}
+        chmod($metadataFile,0600);
+        return $metadata;
     }
 
     public static function rollback($file,$secretDir) {
