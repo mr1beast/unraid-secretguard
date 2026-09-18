@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026.09.18.3
+
+- Overview is now the default landing tab.
+- Protection overview and Docker template audit are grouped on Overview.
+- Secret storage, Dedicated SecretGuard share and Encrypted Vault are grouped together on one Settings tab.
+- UI-only release; backend behavior is unchanged.
+
+## 2026.09.18.1
+
+- Added separate tabs for **Secret storage**, **Dedicated SecretGuard share**, and **Encrypted Vault**.
+- Protection overview and Docker template audit remain visible below the tabs.
+- The selected tab is remembered locally in the browser.
+- UI-only release; no migration, Vault, storage, rollback, or recreation logic changed.
+
+## 2026.09.18
+
+- Added expandable/collapsible Docker container rows in the template audit.
+- Containers are collapsed by default and show counts for variables, HIGH findings and MEDIUM findings.
+- Expanding a container shows the existing variable table and migration controls.
+- No backend or secret-handling behavior changed.
+
+## 2026.09.13.6
+
+- Added optional **Create SecretGuard share** workflow.
+- Creates a dedicated `secretguard` share on a selected mounted persistent disk/pool.
+- Uses `/mnt/<storage>/secretguard` directly for credentials.
+- Disables SMB and NFS export in the generated share config.
+- Pins pool shares with `shareUseCache="only"` + `shareCachePool`, or array disk shares with `shareInclude`.
+- Refuses to overwrite an existing unrelated `secretguard` share/directory.
+
 ## 2026.09.13.5
 
 - Added persistent-storage discovery for Unraid disks and pools instead of assuming a cache pool exists.

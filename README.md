@@ -5,6 +5,17 @@ Docker template XML files on the flash device.
 
 > **Status:** Public beta. Test migrations on a non-critical container first.
 
+
+## Understanding SecretGuard's protection
+
+SecretGuard removes selected credentials from flash-stored Docker XML templates and manages them using the configured protection method.
+
+- **Plain env** stores credentials outside the Docker XML template in a permission-restricted env file. Use encrypted persistent storage when possible.
+- **Encrypted Vault** encrypts SecretGuard-managed credential files at rest and requires the master password after reboot. The master password is not stored and there is no recovery backdoor.
+- **HIGH / MEDIUM** in the audit are detection-confidence levels, not security scores.
+- SecretGuard never needs to display credential values in its audit UI.
+- SecretGuard does not replace host security. Docker and a user with root access to an unlocked server may still be able to access credentials required by running containers.
+
 ## What it does
 
 - Scans only Docker containers currently installed on the Unraid host.
@@ -35,6 +46,12 @@ Important: standard Docker environment variables may still be persisted in Docke
 own container metadata. For strongest at-rest protection, use encrypted Docker storage
 or application-supported file secrets where possible.
 
+
+## Dedicated SecretGuard share
+
+SecretGuard can optionally create a dedicated Unraid share named `secretguard` on a selected mounted persistent disk or pool. The plugin still uses the physical path directly, such as `/mnt/cache/secretguard` or `/mnt/disk1/secretguard`, rather than `/mnt/user/secretguard`.
+
+When SecretGuard creates the share it sets directory permissions to `0700`, disables SMB and NFS export, pins the share to the selected pool/disk, and refuses to overwrite an unrelated existing `secretguard` share. For Plain env mode, encrypted persistent storage is recommended; otherwise use Vault mode.
 
 ## Vault lifecycle and reboot procedure
 
@@ -109,6 +126,11 @@ SecretGuard uses Unraid-style date versions (`YYYY.MM.DD`). If multiple releases
 ## Resetting the Vault
 
 The WebGUI provides **Delete / Reset Vault**. The action is fail-safe: it is blocked while any installed container still uses Vault mode or any encrypted `.sgv` file remains in the configured secret directory. After a successful reset, a new Vault can be initialized with a completely new master password.
+
+
+## WebGUI layout
+
+SecretGuard opens on the **Overview** tab, which contains the protection overview and expandable Docker template audit. Storage, dedicated share and Vault configuration are grouped under the **Settings** tab.
 
 ## Installation
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.13.5"
+SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.3"
 mkdir -p "$OUT"; TAR="$OUT/${NAME}-${VERSION}.tar.gz"; PLG="$OUT/${NAME}.plg"; rm -f "$TAR" "$PLG"
 tar -C "$SRC" -czf "$TAR" .; B64=$(base64 -w 0 "$TAR")
 cat > "$PLG" <<PLG
@@ -14,6 +14,30 @@ cat > "$PLG" <<PLG
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.12.0" icon="secretguard.png">
 <CHANGES>
+### 2026.09.18.3
+- Make Overview the default landing tab.
+- Move Protection overview and Docker template audit onto the Overview tab.
+- Group Secret storage, Dedicated SecretGuard share and Encrypted Vault together on one Settings tab.
+- UI-only change; SecretGuard backend behavior is unchanged.
+
+### 2026.09.18.1
+- Split Secret storage, Dedicated SecretGuard share and Encrypted Vault into separate tabs.
+- Keep Protection overview and Docker template audit visible below the tabbed settings area.
+- Remember the selected settings tab in the browser.
+- UI-only change; SecretGuard backend behavior is unchanged.
+
+### 2026.09.18
+- Collapse Docker audit containers by default using an expandable accordion layout.
+- Show per-container variable count and HIGH/MEDIUM finding summary in the collapsed row.
+- Keep the existing migration form and variable table unchanged inside each expanded container.
+- UI-only change; no migration, Vault, storage, rollback or container recreation logic changed.
+
+### 2026.09.13.6
+- Add optional one-click creation of a dedicated Unraid share named secretguard.
+- Pin the share to the selected physical disk/pool and disable SMB/NFS export.
+- SecretGuard uses the direct physical path instead of /mnt/user/secretguard.
+- Refuse to overwrite an existing non-SecretGuard share or non-empty directory.
+
 ### 2026.09.13.5
 - Discover mounted persistent Unraid storage instead of assuming a cache pool exists.
 - Always show cache as the conventional option; mark it NOT MOUNTED / NOT PERSISTENT when absent.

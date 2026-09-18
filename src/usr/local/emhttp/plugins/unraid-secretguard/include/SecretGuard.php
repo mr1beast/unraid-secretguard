@@ -10,6 +10,8 @@ class SecretGuard {
     const UNLOCK_STATE_FILE = '/run/unraid-secretguard/unlock-state.json';
     const VAULT_START_FILE = '/boot/config/plugins/unraid-secretguard/vault-start.json';
     const VAULT_VERIFIER_TEXT = 'Unraid SecretGuard Vault Verifier v2';
+    const MANAGED_SHARE_NAME = 'secretguard';
+    const SHARE_CFG_DIR = '/boot/config/shares';
 
     private static $highPatterns = [
         '/(^|_)(PASSWORD|PASSWD|PASS|SECRET|TOKEN|API_KEY|APIKEY|CLIENT_SECRET|ACCESS_TOKEN|REFRESH_TOKEN|PRIVATE_KEY|AUTH_TOKEN)(_|$)/i',
@@ -269,6 +271,88 @@ class SecretGuard {
         if(!$st['persistent']) {
             throw new Exception('Plain env migration blocked: the secret directory is not backed by persistent storage (rootfs/tmpfs/RAM or an unmounted pool). Choose a mounted disk/pool or use Vault.');
         }
+    }
+
+    public static function managedShareStatus() {
+        $result=['exists'=>false,'managed'=>false,'path'=>'','storage'=>'','encrypted'=>false,'config'=>''];
+        foreach(self::storageChoices() as $choice) {
+            if(empty($choice['persistent'])) continue;
+            $path=rtrim($choice['root'],'/').'/'.self::MANAGED_SHARE_NAME;
+            $marker=$path.'/.secretguard-managed';
+            if(is_dir($path)) {
+                $result['exists']=true;
+                $result['path']=$path;
+                $result['storage']=$choice['name'];
+                $result['encrypted']=!empty($choice['encrypted']);
+                $result['managed']=is_file($marker);
+                break;
+            }
+        }
+        $cfg=self::SHARE_CFG_DIR.'/'.self::MANAGED_SHARE_NAME.'.cfg';
+        if(is_file($cfg)) $result['config']=$cfg;
+        return $result;
+    }
+
+    public static function createManagedShare($storageRoot) {
+        $storageRoot=rtrim(trim((string)$storageRoot),'/');
+        $allowed=null;
+        foreach(self::storageChoices() as $choice) {
+            if(($choice['root']??'')===$storageRoot && !empty($choice['persistent'])) {$allowed=$choice;break;}
+        }
+        if(!$allowed) throw new Exception('Choose a mounted persistent storage device/pool.');
+        $status=self::storageStatus($storageRoot);
+        if(empty($status['persistent'])) throw new Exception('Selected storage is not persistent.');
+
+        $shareName=self::MANAGED_SHARE_NAME;
+        $sharePath=$storageRoot.'/'.$shareName;
+        $marker=$sharePath.'/.secretguard-managed';
+        $cfg=self::SHARE_CFG_DIR.'/'.$shareName.'.cfg';
+
+        if(is_dir($sharePath) && !is_file($marker)) {
+            $entries=array_values(array_diff(scandir($sharePath)?:[],['.','..']));
+            if($entries) throw new Exception('A non-SecretGuard directory already exists at '.$sharePath.'. Refusing to take ownership of it.');
+        }
+        if(is_file($cfg) && !is_file($marker)) {
+            throw new Exception('An existing Unraid share configuration named "'.$shareName.'" already exists. SecretGuard will not overwrite it.');
+        }
+
+        if(!is_dir($sharePath) && !mkdir($sharePath,0700,true)) throw new Exception('Unable to create '.$sharePath.'.');
+        chmod($sharePath,0700);
+        $markerData=['managed_by'=>'Unraid SecretGuard','version'=>1,'storage_root'=>$storageRoot,'created'=>gmdate('c')];
+        if(file_put_contents($marker,json_encode($markerData,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n",LOCK_EX)===false) throw new Exception('Unable to create SecretGuard share marker.');
+        chmod($marker,0600);
+
+        if(!is_dir(self::SHARE_CFG_DIR) && !mkdir(self::SHARE_CFG_DIR,0700,true)) throw new Exception('Unable to create Unraid share config directory.');
+        $name=(string)$allowed['name'];
+        $isDisk=(bool)preg_match('/^disk[0-9]+$/',$name);
+        $cfgLines=[
+            '# Generated settings:',
+            'shareComment="SecretGuard protected credential storage"',
+            'shareInclude="'.($isDisk?$name:'').'"',
+            'shareExclude=""',
+            'shareUseCache="'.($isDisk?'no':'only').'"',
+            'shareCachePool="'.($isDisk?'cache':addcslashes($name,'\\"')).'"',
+            'shareCOW="auto"',
+            'shareAllocator="highwater"',
+            'shareSplitLevel=""',
+            'shareFloor="0"',
+            'shareExport="-"',
+            'shareCaseSensitive="auto"',
+            'shareSecurity="private"',
+            'shareReadList=""',
+            'shareWriteList=""',
+            'shareVolsizelimit=""',
+            'shareExportNFS="-"',
+            'shareExportNFSFsid="0"',
+            'shareSecurityNFS="private"',
+            'shareHostListNFS=""'
+        ];
+        $tmp=$cfg.'.tmp.'.getmypid();
+        if(file_put_contents($tmp,implode("\n",$cfgLines)."\n",LOCK_EX)===false) throw new Exception('Unable to stage Unraid share configuration.');
+        chmod($tmp,0600);
+        if(!rename($tmp,$cfg)) throw new Exception('Unable to activate Unraid share configuration.');
+        chmod($cfg,0600);
+        return ['path'=>$sharePath,'storage'=>$name,'encrypted'=>!empty($allowed['encrypted']),'config'=>$cfg];
     }
 
     public static function cryptoStatus() {
