@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.3"
+SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.4"
 mkdir -p "$OUT"; TAR="$OUT/${NAME}-${VERSION}.tar.gz"; PLG="$OUT/${NAME}.plg"; rm -f "$TAR" "$PLG"
 tar -C "$SRC" -czf "$TAR" .; B64=$(base64 -w 0 "$TAR")
 cat > "$PLG" <<PLG
@@ -10,10 +10,16 @@ cat > "$PLG" <<PLG
 <!ENTITY name "unraid-secretguard">
 <!ENTITY author "mr1beast">
 <!ENTITY version "$VERSION">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/mr1beast/unraid-secretguard/main/unraid-secretguard.plg">
 <!ENTITY launch "Settings/SecretGuard">
 ]>
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" min="6.12.0" icon="secretguard.png">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" icon="secretguard.png">
 <CHANGES>
+### 2026.09.18.4
+- Enable Unraid plugin update checks through the public GitHub main-branch manifest.
+- pluginURL: https://raw.githubusercontent.com/mr1beast/unraid-secretguard/main/unraid-secretguard.plg
+- No SecretGuard migration, Vault, rollback, storage, Docker recreation or UI behavior changed.
+
 ### 2026.09.18.3
 - Make Overview the default landing tab.
 - Move Protection overview and Docker template audit onto the Overview tab.

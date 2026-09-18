@@ -6,6 +6,21 @@ Docker template XML files on the flash device.
 > **Status:** Public beta. Test migrations on a non-critical container first.
 
 
+
+## Installation and updates
+
+Install SecretGuard from the public manifest:
+
+```text
+https://raw.githubusercontent.com/mr1beast/unraid-secretguard/main/unraid-secretguard.plg
+```
+
+In Unraid, open **Plugins -> Install Plugin** and paste the URL above.
+
+The installed plugin uses the same public manifest as its `pluginURL`. When a newer tested manifest is pushed to the repository's `main` branch, Unraid can detect it through **Plugins -> Check for Updates**.
+
+`main/unraid-secretguard.plg` is therefore the update channel and should only contain tested release builds.
+
 ## Understanding SecretGuard's protection
 
 SecretGuard removes selected credentials from flash-stored Docker XML templates and manages them using the configured protection method.

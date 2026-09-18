@@ -17,3 +17,19 @@
    - `dist/unraid-secretguard.plg`
    - `dist/SHA256SUMS`
 8. Keep the repository/release public before enabling an anonymous GitHub `pluginURL` for Unraid update checks.
+
+
+## Update channel
+
+`main/unraid-secretguard.plg` is the live Unraid update manifest:
+
+```text
+https://raw.githubusercontent.com/mr1beast/unraid-secretguard/main/unraid-secretguard.plg
+```
+
+Only push a tested release manifest to `main`. After building a release:
+
+1. test the `.plg` locally;
+2. copy the tested `dist/unraid-secretguard.plg` to repository root;
+3. commit/push to `main`;
+4. create the matching GitHub Release and attach `unraid-secretguard.plg` and `SHA256SUMS`.

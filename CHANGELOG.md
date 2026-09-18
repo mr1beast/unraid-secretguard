@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026.09.18.3
+## 2026.09.18.4
 
 - Overview is now the default landing tab.
 - Protection overview and Docker template audit are grouped on Overview.
