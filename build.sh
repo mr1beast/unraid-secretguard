@@ -74,12 +74,14 @@ cat > "$PLG" <<PLG
 <FILE Name="/tmp/unraid-secretguard.tar.gz.b64"><INLINE>$B64</INLINE></FILE>
 <FILE Run="/bin/bash" Method="install"><INLINE><![CDATA[
 set -e
-base64 -d /tmp/unraid-secretguard.tar.gz.b64 > /tmp/unraid-secretguard.tar.gz
+tmp=\$(mktemp -d)
+base64 -d /tmp/unraid-secretguard.tar.gz.b64 > "\$tmp/unraid-secretguard.tar.gz"
 mkdir -p /usr/local/emhttp/plugins/unraid-secretguard /boot/config/plugins/unraid-secretguard
-tar --no-same-owner --no-same-permissions -xzf /tmp/unraid-secretguard.tar.gz -C /
+tar --no-same-owner --no-same-permissions -xzf "\$tmp/unraid-secretguard.tar.gz" -C /
 chmod 700 /boot/config/plugins/unraid-secretguard
 chmod 755 /usr/local/emhttp/plugins/unraid-secretguard/scripts/*.sh 2>/dev/null || true
-rm -f /tmp/unraid-secretguard.tar.gz /tmp/unraid-secretguard.tar.gz.b64
+rm -rf "\$tmp"
+rm -f /tmp/unraid-secretguard.tar.gz.b64
 /usr/local/emhttp/plugins/unraid-secretguard/scripts/restart-watcher.sh >/dev/null 2>&1 || true
 if [ -f /boot/config/plugins/unraid-secretguard/vault.json ]; then
   /usr/local/emhttp/webGui/scripts/notify -e "Unraid SecretGuard" -s "SecretGuard vault locked" -d "Encrypted Vault is locked after plugin install/reboot. Open Settings > User Utilities > Unraid SecretGuard and unlock it before recreating containers that use vault env files." -i warning >/dev/null 2>&1 || true
