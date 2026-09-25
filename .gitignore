@@ -1,10 +1,51 @@
 # Build output
 dist/
+build/
+out/
 
-# Temporary/editor files
+# Release/build packages
+*.txz
+*.tgz
+*.tar.gz
+*.zip
+SHA256SUMS
+
+# Secrets / environment
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+*.secrets
+secrets/
+vault/
+private/
+
+# Local Unraid data
+appdata/
+*.bak
+*.backup
+
+# Logs / temporary files
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Editors
 *~
 *.swp
-.DS_Store
+*.swo
 
 # IDE
 .idea/
