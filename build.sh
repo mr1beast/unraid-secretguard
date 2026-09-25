@@ -1,9 +1,56 @@
 #!/bin/bash
 set -euo pipefail
+
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/src"; OUT="$ROOT/dist"; NAME="unraid-secretguard"; VERSION="2026.09.18.6"
-mkdir -p "$OUT"; TAR="$OUT/${NAME}-${VERSION}.tar.gz"; PLG="$OUT/${NAME}.plg"; rm -f "$TAR" "$PLG"
-tar -C "$SRC" -czf "$TAR" .; B64=$(base64 -w 0 "$TAR")
+SRC="$ROOT/src"
+OUT="$ROOT/dist"
+NAME="unraid-secretguard"
+VERSION="2026.09.25"
+ARCH="noarch"
+BUILD="1"
+PACKAGE="${NAME}-${VERSION}-${ARCH}-${BUILD}.txz"
+PACKAGE_PATH="$OUT/$PACKAGE"
+PLG="$OUT/${NAME}.plg"
+PKGROOT="$OUT/.pkgroot"
+RELEASE_URL="https://github.com/mr1beast/unraid-secretguard/releases/download/v${VERSION}/${PACKAGE}"
+
+rm -rf "$PKGROOT"
+mkdir -p "$OUT" "$PKGROOT"
+rm -f "$PACKAGE_PATH" "$PLG" "$OUT/SHA256SUMS" "$OUT/install-local.sh"
+
+# Build a transparent Slackware package containing only SecretGuard's own files.
+# No install/doinst.sh is used; lifecycle actions stay visible in the .plg.
+cp -a "$SRC/usr" "$PKGROOT/"
+chmod 755 "$PKGROOT/usr/local/emhttp/plugins/unraid-secretguard/scripts/"*.sh
+
+mkdir -p "$PKGROOT/install"
+cat > "$PKGROOT/install/slack-desc" <<'DESC'
+unraid-secretguard: unraid-secretguard (SecretGuard for Unraid)
+unraid-secretguard:
+unraid-secretguard: Scans installed Docker templates for likely credentials and can move
+unraid-secretguard: selected values into managed env files or an encrypted Vault.
+unraid-secretguard: Secret values are not displayed in the WebGUI audit.
+unraid-secretguard:
+unraid-secretguard: Project: https://github.com/mr1beast/unraid-secretguard
+unraid-secretguard:
+unraid-secretguard:
+unraid-secretguard:
+unraid-secretguard:
+DESC
+
+# Archive files only (not parent directory entries), avoiding metadata changes to
+# stock directories such as /usr, /usr/local and /usr/local/emhttp.
+mapfile -d '' PACKAGE_FILES < <(
+  cd "$PKGROOT"
+  find usr/local/emhttp/plugins/unraid-secretguard install -type f -print0 | sort -z
+)
+(
+  cd "$PKGROOT"
+  tar --no-recursion --mtime=@0 --owner=0 --group=0 --numeric-owner -cJf "$PACKAGE_PATH" "${PACKAGE_FILES[@]}"
+)
+
+PACKAGE_SHA256="$(sha256sum "$PACKAGE_PATH" | awk '{print $1}')"
+
 cat > "$PLG" <<PLG
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
@@ -15,6 +62,12 @@ cat > "$PLG" <<PLG
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" icon="secretguard.png">
 <CHANGES>
+### 2026.09.25
+- Replace the opaque inline encoded tarball with a public, checksummed Slackware .txz release asset for Community Applications reviewability.
+- Keep install/update lifecycle commands readable in the .plg and install package files with upgradepkg --install-new.
+- Package only SecretGuard-owned files, without archive entries for stock parent directories.
+- Document that the always-on watcher stops Vault-protected containers after reboot until the Vault is unlocked.
+
 ### 2026.09.18.6
 - Add generic adoption of eligible legacy plain env files without rewriting secrets, templates or Docker settings.
 - Store only container, env path, variable names and adoption state under the SecretGuard plugin configuration.
@@ -39,7 +92,7 @@ cat > "$PLG" <<PLG
 - Split Secret storage, Dedicated SecretGuard share and Encrypted Vault into separate tabs.
 - Keep Protection overview and Docker template audit visible below the tabbed settings area.
 - Remember the selected settings tab in the browser.
-- UI-only change; SecretGuard backend behavior is unchanged.
+- UI-only change; no migration, Vault, storage, rollback or container recreation logic changed.
 
 ### 2026.09.18
 - Collapse Docker audit containers by default using an expandable accordion layout.
@@ -71,36 +124,58 @@ cat > "$PLG" <<PLG
 - Scan installed Docker templates and migrate likely credentials to managed env files or encrypted Vault storage.
 - Add automatic recreation, protection overview and variable-level rollback.
 </CHANGES>
-<FILE Name="/tmp/unraid-secretguard.tar.gz.b64"><INLINE>$B64</INLINE></FILE>
+
+<FILE Name="/boot/config/plugins/unraid-secretguard/$PACKAGE" Run="upgradepkg --install-new">
+<URL>$RELEASE_URL</URL>
+<SHA256>$PACKAGE_SHA256</SHA256>
+</FILE>
+
 <FILE Run="/bin/bash" Method="install"><INLINE><![CDATA[
 set -e
-base64 -d /tmp/unraid-secretguard.tar.gz.b64 > /tmp/unraid-secretguard.tar.gz
-mkdir -p /usr/local/emhttp/plugins/unraid-secretguard /boot/config/plugins/unraid-secretguard
-tar --no-same-owner --no-same-permissions -xzf /tmp/unraid-secretguard.tar.gz -C /
+mkdir -p /boot/config/plugins/unraid-secretguard
 chmod 700 /boot/config/plugins/unraid-secretguard
 chmod 755 /usr/local/emhttp/plugins/unraid-secretguard/scripts/*.sh 2>/dev/null || true
-rm -f /tmp/unraid-secretguard.tar.gz /tmp/unraid-secretguard.tar.gz.b64
 /usr/local/emhttp/plugins/unraid-secretguard/scripts/restart-watcher.sh >/dev/null 2>&1 || true
 if [ -f /boot/config/plugins/unraid-secretguard/vault.json ]; then
-  /usr/local/emhttp/webGui/scripts/notify -e "Unraid SecretGuard" -s "SecretGuard vault locked" -d "Encrypted Vault is locked after plugin install/reboot. Open Settings > User Utilities > Unraid SecretGuard and unlock it before recreating containers that use vault env files." -i warning >/dev/null 2>&1 || true
+  /usr/local/emhttp/webGui/scripts/notify -e "Unraid SecretGuard" -s "SecretGuard vault locked" -d "Encrypted Vault is locked after plugin install/reboot. Vault-protected containers are stopped by SecretGuard until you unlock the Vault in Settings > User Utilities > Unraid SecretGuard." -i warning >/dev/null 2>&1 || true
 fi
 echo "Unraid SecretGuard installed. Open Settings -> User Utilities -> Unraid SecretGuard."
 ]]></INLINE></FILE>
+
 <FILE Run="/bin/bash" Method="remove"><INLINE><![CDATA[
 if [ -f /run/unraid-secretguard/watcher.pid ]; then kill "\$(cat /run/unraid-secretguard/watcher.pid)" 2>/dev/null || true; fi
-rm -rf /run/unraid-secretguard /usr/local/emhttp/plugins/unraid-secretguard
+rm -rf /run/unraid-secretguard
+for pkg in /var/log/packages/unraid-secretguard-*; do
+  [ -f "\$pkg" ] || continue
+  removepkg "\$(basename "\$pkg")" >/dev/null 2>&1 || true
+done
+rm -rf /usr/local/emhttp/plugins/unraid-secretguard
 # Preserve persistent settings/vault metadata; encrypted/plain secret files live in the user-selected secret directory.
 echo "Unraid SecretGuard removed. Persistent settings and vault metadata were preserved in /boot/config/plugins/unraid-secretguard."
 ]]></INLINE></FILE>
 </PLUGIN>
 PLG
-cat > "$OUT/install-local.sh" <<'INSTALL'
+
+cat > "$OUT/install-local.sh" <<INSTALL
 #!/bin/bash
 set -euo pipefail
-PLG="${1:-/boot/config/plugins/unraid-secretguard.plg}"
-[ -f "$PLG" ] || { echo "Usage: $0 /path/to/unraid-secretguard.plg" >&2; exit 1; }
-cp -f "$PLG" /boot/config/plugins/unraid-secretguard.plg
-plugin install /boot/config/plugins/unraid-secretguard.plg
+PACKAGE="\${1:-$PACKAGE_PATH}"
+[ -f "\$PACKAGE" ] || { echo "Package not found: \$PACKAGE" >&2; exit 1; }
+upgradepkg --install-new "\$PACKAGE"
+mkdir -p /boot/config/plugins/unraid-secretguard
+chmod 700 /boot/config/plugins/unraid-secretguard
+chmod 755 /usr/local/emhttp/plugins/unraid-secretguard/scripts/*.sh 2>/dev/null || true
+/usr/local/emhttp/plugins/unraid-secretguard/scripts/restart-watcher.sh >/dev/null 2>&1 || true
+echo "Local SecretGuard package installed."
 INSTALL
 chmod +x "$OUT/install-local.sh"
-(cd "$OUT" && sha256sum "$(basename "$PLG")" "$(basename "$TAR")" > SHA256SUMS)
+
+(
+  cd "$OUT"
+  sha256sum "$PACKAGE" "$(basename "$PLG")" > SHA256SUMS
+)
+
+rm -rf "$PKGROOT"
+printf 'Built %s\n' "$PACKAGE_PATH"
+printf 'SHA256 %s\n' "$PACKAGE_SHA256"
+printf 'Manifest %s\n' "$PLG"

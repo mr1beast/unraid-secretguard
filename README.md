@@ -43,6 +43,7 @@ SecretGuard removes selected credentials from flash-stored Docker XML templates 
 - Supports variable-level rollback without restoring an old XML snapshot.
 - Keeps unrelated ports, paths, labels and later template changes untouched.
 - Watches new or changed installed Docker templates and can send Unraid notifications.
+- When Vault mode is in use, the always-on watcher stops Vault-protected containers after reboot until the Vault is unlocked, preventing them from starting without their protected runtime env files.
 
 ## Security model
 
@@ -149,7 +150,7 @@ SecretGuard opens on the **Overview** tab, which contains the protection overvie
 
 ## Installation
 
-Download `unraid-secretguard.plg` from a release and install it on Unraid:
+Download `unraid-secretguard.plg` from a release and install it on Unraid. The manifest downloads the matching SHA256-verified `.txz` release asset and installs it with Unraid's Slackware package tooling:
 
 ```bash
 plugin install /path/to/unraid-secretguard.plg
@@ -167,8 +168,7 @@ Settings -> User Utilities -> Unraid SecretGuard
 Requirements:
 
 - bash
-- tar
-- base64
+- tar with xz support
 - sha256sum
 
 Build with:

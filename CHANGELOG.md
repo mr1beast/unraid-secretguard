@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026.09.25
+
+- Replaced the inline base64/gzip payload with a public, SHA256-verified Slackware `.txz` release asset.
+- Kept install/update lifecycle commands visible in the `.plg`; package installation uses `upgradepkg --install-new`.
+- The release package contains only SecretGuard-owned files and no archive entries for stock parent directories.
+- Documented the always-on watcher behavior: after reboot, Vault-protected containers are stopped until the Vault is unlocked.
+
 ## 2026.09.18.6
 
 - Added **Adopt existing env** for installed containers shown as `Protected / plain / Legacy env: no variable metadata`.
